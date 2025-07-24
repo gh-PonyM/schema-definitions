@@ -93,6 +93,8 @@ def init_project(settings: Settings, project_name: str, force: bool = False, out
     if config_created:
         message_parts.append(f"Config created in {settings._settings_path}")
     message_parts.append(f"Migration folder initialized at {migrations_dir}")
+    if not models_path.is_file():
+        models_path.write_text("# Put your SQLModels in here\n\n")
 
     return InitResult(
         success=True,
@@ -206,9 +208,4 @@ def create_revision(
         message=f"Created revision: {message}",
         revision_file=str(latest_revision) if latest_revision else None
     )
-    #     return RevisionResult(
-    #         success=False,
-    #         message=f"Error creating revision: {e}"
-    #     )
-    # finally:
     os.unlink(alembic_ini_path)
