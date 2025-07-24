@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "schemi"
+version = "0.1.0"
+description = "A command line tool for managing database schemas and migrations"
+authors = [
+    {name = "Your Name", email = "dev@lksch.ch"},
+]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "sqlmodel>=0.0.14",
+    "alembic>=1.13.0",
+    "typer>=0.9.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0.0",
+]
+
+[project.scripts]
+schemi = "schemi.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/gh-PonyM/schemi"
+Repository = "https://github.com/gh-PonyM/schemi"
+
+[tool.hatch.build.targets.wheel]
+packages = ["schemi"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/schemi",
+    "/tests",
+    "/README.md",
+    "/pyproject.toml",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+lint.ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "B904",  # typer raise Exit
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+   
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.12.4",
+]
