@@ -212,17 +212,16 @@ def test_revision_command_success(runner, cli_settings_path, temp_settings_dir):
 
     # Create a revision
     result = runner.invoke(app, ["revision", project_name, "--message", "Initial migration"])
-    print(result.stdout)
+    print(result.stderr)
     assert result.exit_code == 0
     assert "Created revision: Initial migration" in result.stdout
 
     # Check that the revision file was created
     revision_files = list(versions_dir.glob("*.py"))
-    assert len(revision_files) >= 1
+    assert len(revision_files) == 1
 
     # Check that the revision file contains expected content
-    latest_revision = max(revision_files, key=lambda p: p.stat().st_mtime)
-    with open(latest_revision) as f:
+    with open(revision_files[0]) as f:
         content = f.read()
         assert "Initial migration" in content
         assert "def upgrade()" in content
