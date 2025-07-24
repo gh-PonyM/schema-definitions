@@ -179,8 +179,6 @@ def create_revision(
         f.write(env_py_content)
 
     # Run alembic revision command
-    print(alembic_ini_path)
-    assert Path(alembic_ini_path).is_file()
     cmd = ['alembic', '-c', alembic_ini_path, 'revision']
     if autogenerate:
         cmd.append('--autogenerate')
@@ -192,7 +190,6 @@ def create_revision(
         text=True,
         cwd=str(migrations_dir.parent)
     )
-
     if result.returncode != 0:
         return RevisionResult(
             success=False,
