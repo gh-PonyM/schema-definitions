@@ -43,7 +43,7 @@ class DatabaseConfig(BaseModel):
 class ProjectConfig(BaseModel):
     """Configuration for a specific project."""
 
-    module: str = Field(..., description="Path to Python module containing SQLModel definitions")
+    module: Path = Field(..., description="Path to Python module containing SQLModel definitions")
     db: dict[str, DatabaseConfig] = Field(..., description="Database environments")
 
 

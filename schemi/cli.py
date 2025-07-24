@@ -1,7 +1,7 @@
 """Main CLI application for schemi."""
 
 from typing import Annotated
-
+from pathlib import Path
 import typer
 
 from .core import clone_database, create_revision, init_project, migrate_database
@@ -48,7 +48,7 @@ def init(
     ctx: typer.Context,
     project_name: Annotated[str, typer.Argument(help="Name of the project to initialize")],
     force: Annotated[bool, typer.Option("--force", "-f", help="Overwrite existing migration files")] = False,
-    output: Annotated[str | None, typer.Option("--output", "-o", help="Output directory for project files")] = None,
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output directory for project files")] = None,
 ):
     """Initialize migration folder for a project."""
     settings: Settings = ctx.obj["settings"]

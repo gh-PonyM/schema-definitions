@@ -24,7 +24,7 @@ def test_init_command_success(runner, cli_settings_path, temp_settings_dir):
     # Check that projectA was added to the configuration
     assert "projectA" in loaded_settings.projects
     project_config = loaded_settings.projects["projectA"]
-    assert project_config.module == str(temp_settings_dir / "projectA" / "models.py")
+    assert project_config.module == temp_settings_dir / "projectA" / "models.py"
     assert project_config.db == {}  # Should be empty dict for new project
 
 
@@ -188,31 +188,36 @@ def test_revision_command_success(runner, cli_settings_path, temp_settings_dir):
 
     # Get the absolute path to tests/models.py
     tests_dir = Path(__file__).parent
-    models_path = tests_dir / "models.py"
-
-    # First, initialize a project with the tests/models.py
-    result = runner.invoke(app, ["init", "testproject", "--output", str(temp_settings_dir)])
+    project_name = "testproject"
+    source_models_path = tests_dir / "fixtures" / "models.py"
+    project_dir = temp_settings_dir / project_name
+    project_dir.mkdir()
+    target_models_path = project_dir / "models.py"
+    versions_dir = project_dir / "migrations" / "versions"
+    
+    # Copy the test models.py to the temp directory
+    import shutil
+    shutil.copy2(source_models_path, project_dir / "models.py")
+    
+    # First, initialize a project with the output directory
+    result = runner.invoke(app, ["init", project_name, "--output", str(temp_settings_dir)])
     assert result.exit_code == 0
+    assert project_dir.is_dir()
+    assert versions_dir.is_dir()
 
-    # Update the project config to point to the test models
+    # Verify the project config points to the correct models file
     from schemi.settings import Settings
     settings = Settings.load()
-    settings.projects["testproject"].module = str(models_path)
-    settings.save()
+    assert settings.projects[project_name].module == target_models_path.absolute()
 
     # Create a revision
-    result = runner.invoke(app, ["revision", "testproject", "--message", "Initial migration"])
-
+    result = runner.invoke(app, ["revision", project_name, "--message", "Initial migration"])
+    print(result.stdout)
     assert result.exit_code == 0
     assert "Created revision: Initial migration" in result.stdout
 
     # Check that the revision file was created
-    project_dir = temp_settings_dir / "testproject"
-    versions_dir = project_dir / "migrations" / "versions"
     revision_files = list(versions_dir.glob("*.py"))
-
-    # Should have at least one revision file (excluding __init__.py)
-    revision_files = [f for f in revision_files if f.name != "__init__.py"]
     assert len(revision_files) >= 1
 
     # Check that the revision file contains expected content
