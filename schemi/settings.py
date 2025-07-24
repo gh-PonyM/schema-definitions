@@ -1,11 +1,13 @@
 """Settings models for schema management."""
 
-import platform
 from pathlib import Path
 from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
+import typer
+
+DEFAULT_SETTINGS_FN = "settings.yaml"
 
 
 class SqliteConnection(BaseModel):
@@ -17,11 +19,11 @@ class SqliteConnection(BaseModel):
 class PostgresConnection(BaseModel):
     """PostgreSQL database connection configuration."""
 
-    host: str
+    host: str = "127.0.0.1"
     port: int = 5432
-    username: str
-    password: str
-    database: str
+    username: str = "postgres"
+    database: str = "postgres"
+    password: str = "postgres"
 
 
 class DatabaseConfig(BaseModel):
@@ -73,19 +75,14 @@ class Settings(BaseModel):
         if env_path:
             return Path(env_path)
 
-        # Use OS default config location
-        if platform.system() == "Windows":
-            config_dir = Path.home() / "AppData" / "Roaming" / "schemi"
-        else:  # Unix-like
-            config_dir = Path.home() / ".config" / "schemi"
-
+        config_dir = Path(typer.get_app_dir("schemi"))
         config_dir.mkdir(parents=True, exist_ok=True)
-        return config_dir / "settings.yaml"
+        return config_dir / DEFAULT_SETTINGS_FN
 
     @classmethod
-    def load(cls) -> "Settings":
+    def load(cls, settings_path: Path | None = None) -> "Settings":
         """Load settings from file."""
-        settings_path = cls._get_settings_path()
+        settings_path = settings_path or cls._get_settings_path()
 
         if not settings_path.exists():
             # Create default settings file
@@ -94,7 +91,7 @@ class Settings(BaseModel):
             return settings
 
         with open(settings_path, encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
+            data = yaml.safe_load(f)
 
         settings = cls(**data)
         settings._settings_path = settings_path
@@ -106,7 +103,7 @@ class Settings(BaseModel):
             self._settings_path = self._get_settings_path()
 
         # Ensure directory exists
-        self._settings_path.parent.mkdir(parents=True, exist_ok=True)
+        self._settings_path.parent.mkdir(exist_ok=True)
 
         # Re-validate
         data_dump = self.model_dump(exclude={"_settings_path"}, mode="json")

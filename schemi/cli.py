@@ -3,7 +3,6 @@
 from typing import Annotated
 from pathlib import Path
 import typer
-
 from .core import clone_database, create_revision, init_project, migrate_database
 from .settings import Settings
 from .validation import (
@@ -24,7 +23,7 @@ app = typer.Typer(
 def main(
     ctx: typer.Context,
     settings_path: Annotated[
-        str | None,
+        Path | None,
         typer.Option(
             "--settings-path",
             "-s",
@@ -34,11 +33,7 @@ def main(
     ] = None,
 ):
     """Schemi: Database schema and migration management tool."""
-    if settings_path:
-        import os
-        os.environ["SCHEMI_SETTINGS_PATH"] = settings_path
-
-    settings = Settings.load()
+    settings = Settings.load(settings_path)
     ctx.ensure_object(dict)
     ctx.obj["settings"] = settings
 

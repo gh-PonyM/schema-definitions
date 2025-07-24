@@ -86,9 +86,9 @@ def init_project(settings: Settings, project_name: str, force: bool = False, out
     versions_dir.mkdir(exist_ok=True)
 
     # Create script.py.mako template for alembic
-    script_template = (templates_path / "script.py.mako")
-    script_template_path = migrations_dir / "script.py.mako"
-    shutil.copy2(script_template, script_template_path)
+    # script_template = (templates_path / "script.py.mako")
+    # script_template_path = migrations_dir / "script.py.mako"
+    # shutil.copy2(script_template, script_template_path)
     message_parts = []
     if config_created:
         message_parts.append(f"Config created in {settings._settings_path}")
@@ -157,26 +157,30 @@ def create_revision(
 
     # Create temporary alembic.ini file
     alembic_ini_content = (templates_path / "alembic.ini").read_text()
-    alembic_ini_content = alembic_ini_content.format(
-        migrations_dir=str(migrations_dir),
-        versions_dir=str(versions_dir)
-        )
-
+    
     # Create temporary env.py file
     env_py_content = (templates_path / "env.py").read_text()
     env_py_content = env_py_content.format(
-    models_path=models_path,
-    models_import_path=models_path.stem,
+      models_path=models_path,
+      models_import_path=models_path.stem,
     )
     # Create temporary files
     with tempfile.NamedTemporaryFile(mode='w', suffix='.ini', delete=False) as f:
-        f.write(alembic_ini_content)
         alembic_ini_path = f.name
+        alembic_script_dir = Path(f.name).parent
+        alembic_ini_content = alembic_ini_content.format(
+        script_dir=str(alembic_script_dir),
+        versions_dir=str(versions_dir)
+        )
+        f.write(alembic_ini_content)
 
-    # Write env.py to migrations directory
-    env_py_path = migrations_dir / "env.py"
-    with open(env_py_path, 'w') as f:
-        f.write(env_py_content)
+    # Write env.py to script_location directory
+    env_py_path = alembic_script_dir / "env.py"
+    env_py_path.write_text(env_py_content)
+
+    script_template = templates_path / "script.py.mako"
+    script_template_path = alembic_script_dir / script_template.name
+    shutil.copy2(script_template, script_template_path)
 
     # Run alembic revision command
     cmd = ['alembic', '-c', alembic_ini_path, 'revision']

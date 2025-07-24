@@ -212,7 +212,6 @@ def test_revision_command_success(runner, cli_settings_path, temp_settings_dir):
 
     # Create a revision
     result = runner.invoke(app, ["revision", project_name, "--message", "Initial migration"])
-    print(result.stderr)
     assert result.exit_code == 0
     assert "Created revision: Initial migration" in result.stdout
 

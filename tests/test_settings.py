@@ -68,7 +68,7 @@ def test_project_config_valid():
         db={"staging": db_config}
     )
 
-    assert config.module == "src/models.py"
+    assert config.module == Path("src/models.py")
     assert "staging" in config.db
     assert config.db["staging"] == db_config
 
@@ -89,7 +89,7 @@ def test_settings_with_data(sample_settings_data):
     assert "projectA" in settings.projects
 
     project = settings.projects["projectA"]
-    assert project.module == "tests/fixtures/models.py"
+    assert project.module == Path("tests/fixtures/models.py")
     assert "staging" in project.db
     assert "prod" in project.db
 
