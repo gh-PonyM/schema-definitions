@@ -53,7 +53,7 @@ def sample_settings_data(temp_settings_dir):
     return {
         "development": {
             "db": {
-                "sqlite": {
+                "projectA": {
                     "type": "sqlite",
                     "connection": {
                         "db_path": str(temp_settings_dir / "schemi-dev.sqlite")
@@ -78,7 +78,7 @@ def sample_settings_data(temp_settings_dir):
                     "staging": {
                         "type": "sqlite",
                         "connection": {
-                            "db_path": str(temp_settings_dir / "staging.sqlit")
+                            "db_path": str(temp_settings_dir / "staging.sqlite")
                         },
                     },
                     "prod": {
