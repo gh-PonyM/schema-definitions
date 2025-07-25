@@ -7,7 +7,9 @@ import yaml
 from pydantic import BaseModel, Field, field_validator, PrivateAttr
 from urllib.parse import quote_plus
 
-from schemi.constants import DEFAULT_SETTINGS_FN, DEFAULT_DEV_DB_NAME
+from schemi.constants import DEFAULT_SETTINGS_FN
+
+DBType = Literal["sqlite", "postgres"]
 
 
 class SqliteConnection(BaseModel):
@@ -45,11 +47,10 @@ class PostgresConnection(BaseModel):
         return v
 
 
-
 class DatabaseConfig(BaseModel):
     """Database configuration for a specific environment."""
 
-    type: Literal["sqlite", "postgres"]
+    type: DBType
     connection: SqliteConnection | PostgresConnection
 
     @property
@@ -60,32 +61,58 @@ class DatabaseConfig(BaseModel):
 class ProjectConfig(BaseModel):
     """Configuration for a specific project."""
 
-    module: Path = Field(..., description="Path to Python module containing SQLModel definitions")
+    module: Path = Field(
+        ..., description="Path to Python module containing DB Model definitions"
+    )
     db: dict[str, DatabaseConfig] = Field(..., description="Database environments")
-
-
-def default_dev_config():
-    return {"sqlite": DatabaseConfig(type="sqlite", connection=SqliteConnection(db_path=DEFAULT_DEV_DB_NAME))}
 
 
 class DevelopmentConfig(BaseModel):
     """Development database configuration."""
 
-    db: dict[str, DatabaseConfig] = Field(default_factory=default_dev_config)
+    db: dict[str, DatabaseConfig] = Field(default_factory=dict)
+
+    @staticmethod
+    def connection_sqlite(project_name: str, **unused):
+        return {
+            project_name: DatabaseConfig(
+                type="sqlite",
+                connection=SqliteConnection(db_path=f"{project_name}.sqlite"),
+            )
+        }
+
+    @staticmethod
+    def connection_postgres(project_name: str, **connection_args):
+        return {
+            project_name: DatabaseConfig(
+                type="postgres", connection=PostgresConnection(**connection_args)
+            )
+        }
+
+    def add_connection(self, project_name: str, db_type: DBType, **connection_args):
+        fn_map = {
+            "sqlite": self.connection_sqlite,
+            "postgres": self.connection_postgres,
+        }
+        self.db.update(fn_map[db_type](project_name, **connection_args))
 
 
 def default_settings_path() -> Path:
     return Path(".") / DEFAULT_SETTINGS_FN
 
 
-
 class Settings(BaseModel):
     """Main settings configuration."""
 
-    development: DevelopmentConfig | None = None
+    development: DevelopmentConfig = DevelopmentConfig()
     projects: dict[str, ProjectConfig] = Field(default_factory=dict)
 
     _settings_path: Path | None = PrivateAttr(default_factory=default_settings_path)
+
+    def add_project(self, project_name: str, code_path: Path) -> ProjectConfig:
+        if project_name not in self.projects:
+            self.projects[project_name] = ProjectConfig(module=code_path, db={})
+        return self.projects[project_name]
 
     @classmethod
     def from_file(cls, settings_path: Path) -> "Settings":

@@ -12,7 +12,6 @@ from schemi.settings import Settings
 
 
 class CliRunner(BaseCliRunner):
-
     with_traceback = True
 
     def invoke(self, cli, commands, **kwargs):
@@ -65,9 +64,9 @@ def sample_settings_data():
                         "port": 5432,
                         "username": "dev",
                         "password": "dev_pass",
-                        "database": "dev_db"
-                    }
-                }
+                        "database": "dev_db",
+                    },
+                },
             }
         },
         "projects": {
@@ -76,9 +75,7 @@ def sample_settings_data():
                 "db": {
                     "staging": {
                         "type": "sqlite",
-                        "connection": {
-                            "db_path": "/path/to/staging.db"
-                        }
+                        "connection": {"db_path": "/path/to/staging.db"},
                     },
                     "prod": {
                         "type": "postgres",
@@ -87,13 +84,14 @@ def sample_settings_data():
                             "port": 5432,
                             "username": "prod_user",
                             "password": "prod_pass",
-                            "database": "prod_db"
-                        }
-                    }
-                }
+                            "database": "prod_db",
+                        },
+                    },
+                },
             }
-        }
+        },
     }
+
 
 @pytest.fixture
 def runner():

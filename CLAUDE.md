@@ -49,6 +49,10 @@ Clone command should support the clone from one into another db, only allowing t
 
     schemi clone <source> <target>
 
+Creatin revisions using alembic:
+
+   schemi revision -m "message" --autogenerate
+
 ## Proposed settings format
 
 Here is an example of a settings file we want to use, validated by a pydantic model.

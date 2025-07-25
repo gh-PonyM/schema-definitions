@@ -8,7 +8,10 @@ def test_main_help(runner, cli_settings):
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
-    assert "A command line tool for managing database schemas and migrations" in result.stdout
+    assert (
+        "A command line tool for managing database schemas and migrations"
+        in result.stdout
+    )
     assert "init" in result.stdout
     assert "migrate" in result.stdout
     assert "clone" in result.stdout

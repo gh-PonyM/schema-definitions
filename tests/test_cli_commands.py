@@ -5,7 +5,9 @@ from schemi.cli import app
 
 def test_init_command_success(runner, cli_settings_path, temp_settings_dir):
     """Test successful init command where no config was created before"""
-    result = runner.invoke(app, ["init", "projectA", "--output", str(temp_settings_dir)])
+    result = runner.invoke(
+        app, ["init", "projectA", "--output", str(temp_settings_dir)]
+    )
     print(result.stdout)
     assert result.exit_code == 0
     assert "Config created in " in result.stdout
@@ -19,6 +21,7 @@ def test_init_command_success(runner, cli_settings_path, temp_settings_dir):
 
     # Verify the config was written correctly by reading it back
     from schemi.settings import Settings
+
     loaded_settings = Settings.from_file(cli_settings_path)
 
     # Check that projectA was added to the configuration
@@ -30,7 +33,9 @@ def test_init_command_success(runner, cli_settings_path, temp_settings_dir):
 
 def test_init_command_creates_new_project(runner, cli_settings_path, temp_settings_dir):
     """Test init command creates new project when it doesn't exist."""
-    result = runner.invoke(app, ["init", "newproject", "--output", str(temp_settings_dir)])
+    result = runner.invoke(
+        app, ["init", "newproject", "--output", str(temp_settings_dir)]
+    )
 
     assert result.exit_code == 0
     assert "Config created in " in result.stdout
@@ -48,7 +53,9 @@ def test_init_command_with_force(runner, cli_settings, temp_settings_dir):
     runner.invoke(app, ["init", "projectA", "--output", str(temp_settings_dir)])
 
     # Second init with force
-    result = runner.invoke(app, ["init", "projectA", "--force", "--output", str(temp_settings_dir)])
+    result = runner.invoke(
+        app, ["init", "projectA", "--force", "--output", str(temp_settings_dir)]
+    )
 
     assert result.exit_code == 0
     assert "Migration folder initialized" in result.stdout
@@ -96,7 +103,9 @@ def test_migrate_command_environment_not_found(runner, cli_settings):
 
 def test_migrate_command_with_message(runner, cli_settings):
     """Test migrate command with message option."""
-    result = runner.invoke(app, ["migrate", "projectA.staging", "--message", "Test migration"])
+    result = runner.invoke(
+        app, ["migrate", "projectA.staging", "--message", "Test migration"]
+    )
 
     assert result.exit_code == 0
     assert "Migrated database " in result.stdout
@@ -120,7 +129,9 @@ def test_clone_command_success(runner, cli_settings):
 
 def test_clone_command_dry_run(runner, cli_settings):
     """Test clone command with dry run."""
-    result = runner.invoke(app, ["clone", "projectA.staging", "projectA.staging", "--dry-run"])
+    result = runner.invoke(
+        app, ["clone", "projectA.staging", "projectA.staging", "--dry-run"]
+    )
 
     assert result.exit_code == 0
     # assert "[DRY RUN] Would clone staging_db to staging_db (sqlite)" in result.stdout
@@ -179,7 +190,9 @@ def test_clone_command_mismatched_database_types(runner, cli_settings):
     result = runner.invoke(app, ["clone", "projectA.staging", "projectA.prod"])
 
     assert result.exit_code == 1
-    assert "Database types must match (source: sqlite, target: postgres)" in result.stderr
+    assert (
+        "Database types must match (source: sqlite, target: postgres)" in result.stderr
+    )
 
 
 def test_revision_command_success(runner, cli_settings_path, temp_settings_dir):
@@ -194,24 +207,30 @@ def test_revision_command_success(runner, cli_settings_path, temp_settings_dir):
     project_dir.mkdir()
     target_models_path = project_dir / "models.py"
     versions_dir = project_dir / "migrations" / "versions"
-    
+
     # Copy the test models.py to the temp directory
     import shutil
+
     shutil.copy2(source_models_path, project_dir / "models.py")
-    
+
     # First, initialize a project with the output directory
-    result = runner.invoke(app, ["init", project_name, "--output", str(temp_settings_dir)])
+    result = runner.invoke(
+        app, ["init", project_name, "--output", str(temp_settings_dir)]
+    )
     assert result.exit_code == 0
     assert project_dir.is_dir()
     assert versions_dir.is_dir()
 
     # Verify the project config points to the correct models file
     from schemi.settings import Settings
+
     settings = Settings.from_file(cli_settings_path)
     assert settings.projects[project_name].module == target_models_path.absolute()
 
-    # Create a revision
-    result = runner.invoke(app, ["revision", project_name, "--message", "Initial migration"])
+    # Create a revision using in memory sqlite db
+    result = runner.invoke(
+        app, ["revision", project_name, "--message", "Initial migration"]
+    )
     print(result.stderr)
     print(result.stdout)
     assert result.exit_code == 0
