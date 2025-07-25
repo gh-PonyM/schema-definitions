@@ -2,9 +2,7 @@
 
 from pathlib import Path
 
-import yaml
 
-from schemi.constants import SETTINGS_PATH_ENV_VAR
 from schemi.settings import (
     DatabaseConfig,
     Settings,

@@ -7,7 +7,7 @@ import yaml
 from pydantic import BaseModel, Field, field_validator, PrivateAttr
 from urllib.parse import quote_plus
 
-from schemi.constants import DEFAULT_SETTINGS_FN
+from schemi.constants import DEFAULT_SETTINGS_FN, DEFAULT_DEV_DB_NAME
 
 
 class SqliteConnection(BaseModel):
@@ -64,10 +64,14 @@ class ProjectConfig(BaseModel):
     db: dict[str, DatabaseConfig] = Field(..., description="Database environments")
 
 
+def default_dev_config():
+    return {"sqlite": DatabaseConfig(type="sqlite", connection=SqliteConnection(db_path=DEFAULT_DEV_DB_NAME))}
+
+
 class DevelopmentConfig(BaseModel):
     """Development database configuration."""
 
-    db: dict[str, str | DatabaseConfig] = Field(default_factory=dict)
+    db: dict[str, DatabaseConfig] = Field(default_factory=default_dev_config)
 
 
 def default_settings_path() -> Path:
