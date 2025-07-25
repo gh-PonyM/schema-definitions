@@ -93,7 +93,7 @@ def init(
         project_name,
         force,
         output,
-        connection.value,
+        connection.value if connection else None,
         env,
         dev_db_type=dev_db_type.value,
     )
