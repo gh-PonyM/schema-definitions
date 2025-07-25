@@ -187,7 +187,6 @@ def create_revision(
     autogenerate: bool = True,
 ) -> RevisionResult:
     """Create a new migration revision using alembic."""
-    models_path = project_config.module.absolute()
     migrations_dir = project_config.migrations_dir
     versions_dir = project_config.versions_dir
 
@@ -219,11 +218,9 @@ def migrate_database(
     project_config: ProjectConfig,
     db_config: DatabaseConfig,
     dry_run: bool = False,
-    message: str | None = None,
     revision: str = "HEAD",
 ) -> MigrateResult:
     """Run database migrations."""
-    # TODO: Implement actual alembic integration
     cmd = ["upgrade", revision]
     if dry_run:
         # Does not apply migration to db, but emits sql to stdout

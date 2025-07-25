@@ -2,20 +2,7 @@
 
 import typer
 
-from .settings import DatabaseConfig, ProjectConfig, Settings
-
-
-def validate_project_exists(settings: Settings, project_name: str) -> ProjectConfig:
-    """Validate that project exists in settings."""
-    if project_name not in settings.projects:
-        typer.secho(
-            f"Error: Project '{project_name}' not found in settings",
-            err=True,
-            fg=typer.colors.RED,
-        )
-        raise typer.Exit(1)
-
-    return settings.projects[project_name]
+from .settings import DatabaseConfig
 
 
 def validate_matching_db_types(src_db: DatabaseConfig, tgt_db: DatabaseConfig) -> None:

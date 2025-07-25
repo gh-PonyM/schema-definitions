@@ -4,7 +4,6 @@ from pathlib import Path
 from traceback import print_tb
 
 import pytest
-import yaml
 from typer.testing import CliRunner as BaseCliRunner
 
 from schemi.constants import SETTINGS_PATH_ENV_VAR
