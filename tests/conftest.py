@@ -31,7 +31,7 @@ def temp_settings_dir():
 
 
 @pytest.fixture
-def cli_settings_path(temp_settings_dir, monkeypatch, sample_settings_data):
+def cli_settings_path(temp_settings_dir, monkeypatch):
     """Create settings for CLI testing with environment variable set."""
     settings_path = temp_settings_dir / "test_settings.yaml"
     monkeypatch.setenv(SETTINGS_PATH_ENV_VAR, str(settings_path))
@@ -41,22 +41,25 @@ def cli_settings_path(temp_settings_dir, monkeypatch, sample_settings_data):
 @pytest.fixture
 def cli_settings(cli_settings_path, monkeypatch, sample_settings_data):
     """Create settings for CLI testing with environment variable set."""
-
-    # Write settings data to file
-    with open(cli_settings_path, "w") as f:
-        yaml.dump(sample_settings_data, f)
-
     # Return loaded settings instance
-    return Settings.from_file()
+    s = Settings(**sample_settings_data)
+    s._settings_path = cli_settings_path
+    s.save()
+    return s
 
 
 @pytest.fixture
-def sample_settings_data():
+def sample_settings_data(temp_settings_dir):
     """Sample settings data for testing."""
     return {
         "development": {
             "db": {
-                "sqlite": "schemi-dev.sqlite",
+                "sqlite": {
+                    "type": "sqlite",
+                    "connection": {
+                        "db_path": str(temp_settings_dir / "schemi-dev.sqlite")
+                    },
+                },
                 "pglocal": {
                     "type": "postgres",
                     "connection": {
@@ -75,7 +78,9 @@ def sample_settings_data():
                 "db": {
                     "staging": {
                         "type": "sqlite",
-                        "connection": {"db_path": "/path/to/staging.db"},
+                        "connection": {
+                            "db_path": str(temp_settings_dir / "staging.sqlit")
+                        },
                     },
                     "prod": {
                         "type": "postgres",
