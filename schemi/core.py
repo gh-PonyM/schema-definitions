@@ -178,6 +178,23 @@ def create_alembic_temp_files(tmp: Path, models_path: Path, versions_dir: Path) 
     shutil.copy2(script_template, script_template_path)
 
 
+def run_alembic(cmd: list[str], project_cfg: ProjectConfig, db_config: DatabaseConfig):
+    import subprocess
+    import os
+
+    with create_temp_dir() as tmp:
+        create_alembic_temp_files(tmp, project_cfg.module, project_cfg.versions_dir)
+        # Run alembic revision command
+        cmd = ["alembic", "-c", str(tmp / "alembic.ini"), *cmd]
+        os.environ["SCHEMI_CURRENT_DSN"] = db_config.connection.get_dsn
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(project_cfg.migrations_dir.parent),
+        )
+
+
 def create_revision(
     project_config: ProjectConfig,
     db_config: DatabaseConfig,
@@ -185,12 +202,9 @@ def create_revision(
     autogenerate: bool = True,
 ) -> RevisionResult:
     """Create a new migration revision using alembic."""
-    import subprocess
-    import os
-
     models_path = project_config.module.absolute()
-    migrations_dir = models_path.parent / "migrations"
-    versions_dir = migrations_dir / "versions"
+    migrations_dir = project_config.migrations_dir
+    versions_dir = project_config.versions_dir
 
     # Check if migrations directory exists
     if not migrations_dir.exists():
@@ -198,20 +212,10 @@ def create_revision(
             success=False,
             message=f"Migrations directory not found at {migrations_dir}. Run '{PROG_NAME} init' first.",
         )
-    with create_temp_dir() as tmp:
-        create_alembic_temp_files(tmp, models_path, versions_dir)
-        # Run alembic revision command
-        cmd = ["alembic", "-c", str(tmp / "alembic.ini"), "revision"]
-        if autogenerate:
-            cmd.append("--autogenerate")
-        cmd.extend(["-m", message])
-        os.environ["SCHEMI_CURRENT_DSN"] = db_config.connection.get_dsn
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            cwd=str(migrations_dir.parent),
-        )
+    cmd = ["revision", "-m", message]
+    if autogenerate:
+        cmd.append("--autogenerate")
+    result = run_alembic(cmd, project_config, db_config)
     if result.returncode != 0:
         return RevisionResult(
             success=False, message=f"Alembic revision failed: {result.stderr}"

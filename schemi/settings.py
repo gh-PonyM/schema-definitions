@@ -66,6 +66,14 @@ class ProjectConfig(BaseModel):
     )
     db: dict[str, DatabaseConfig] = Field(..., description="Database environments")
 
+    @property
+    def versions_dir(self):
+        return self.migrations_dir / "versions"
+
+    @property
+    def migrations_dir(self):
+        return self.module / "migrations"
+
 
 class DevelopmentConfig(BaseModel):
     """Development database configuration."""
