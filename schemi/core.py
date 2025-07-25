@@ -25,6 +25,7 @@ class MigrateResult(NamedTuple):
 
     success: bool
     message: str
+    sql: str | None = None
 
 
 class CloneResult(NamedTuple):
@@ -113,22 +114,6 @@ def init_project(
         message="\n".join(message_parts),
         config_created=config_created,
         models_path=str(models_path),
-    )
-
-
-def migrate_database(
-    project_config: ProjectConfig,
-    db_config: DatabaseConfig,
-    dry_run: bool = False,
-    message: str | None = None,
-    revision: str | None = None,
-) -> MigrateResult:
-    """Run database migrations."""
-    # TODO: Implement actual alembic integration
-    action = "[DRY RUN] Would migrate" if dry_run else "Migrated"
-    return MigrateResult(
-        success=True,
-        message=f"{action} database '{db_config.db_name}' ({db_config.type})",
     )
 
 
@@ -227,4 +212,31 @@ def create_revision(
         success=True,
         message=f"Created revision: {message}",
         revision_file=str(latest_revision) if latest_revision else None,
+    )
+
+
+def migrate_database(
+    project_config: ProjectConfig,
+    db_config: DatabaseConfig,
+    dry_run: bool = False,
+    message: str | None = None,
+    revision: str = "HEAD",
+) -> MigrateResult:
+    """Run database migrations."""
+    # TODO: Implement actual alembic integration
+    cmd = ["upgrade", revision]
+    if dry_run:
+        # Does not apply migration to db, but emits sql to stdout
+        cmd.append("--sql")
+    result = run_alembic(cmd, project_config, db_config)
+    if result.returncode != 0:
+        return MigrateResult(
+            success=False,
+            message=f"Failed to run alembic migrations ‘{db_config.db_name}’ ({db_config.type})",
+            sql=result.stdout.strip() if dry_run else None,
+        )
+    action = "[DRY RUN] Would migrate" if dry_run else "Migrated"
+    return MigrateResult(
+        success=True,
+        message=f"{action} database ‘{db_config.db_name}’ ({db_config.type})",
     )

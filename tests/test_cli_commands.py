@@ -8,7 +8,6 @@ def test_init_command_success(runner, cli_settings_path, temp_settings_dir):
     result = runner.invoke(
         app, ["init", "projectA", "--output", str(temp_settings_dir)]
     )
-    print(result.stdout)
     assert result.exit_code == 0
     assert "Config created in " in result.stdout
     assert "Migration folder initialized" in result.stdout

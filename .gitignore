@@ -85,3 +85,6 @@ migrations/versions/
 # Editors
 .idea/
 .aider*
+
+# config
+schemi_settings.yml

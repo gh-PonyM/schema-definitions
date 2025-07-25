@@ -3,12 +3,16 @@ from typing import Annotated
 from pathlib import Path
 import typer
 
-from schemi.custom_types import CliConnection, parse_connection
+from schemi.custom_types import (
+    CliConnection,
+    parse_connection,
+    ProjectEnvironment,
+    ProjectEnvironParser,
+)
 from .core import clone_database, create_revision, init_project, migrate_database
 from .settings import Settings, default_settings_path
 from .validation import (
     validate_matching_db_types,
-    validate_project_environment,
 )
 from .constants import SETTINGS_PATH_ENV_VAR, PROG_NAME
 
@@ -106,13 +110,13 @@ def init(
 
 
 TargetType = Annotated[
-    str, typer.Argument(help="Target in format 'project.environment'")
+    ProjectEnvironment,
+    typer.Argument(help="project or project.env", click_type=ProjectEnvironParser()),
 ]
 
 
 @app.command()
 def migrate(
-    ctx: typer.Context,
     target: TargetType,
     dry_run: Annotated[
         bool,
@@ -126,13 +130,9 @@ def migrate(
     ] = None,
 ):
     """Run database migrations."""
-    settings: Settings = ctx.obj["settings"]
-
-    pe = validate_project_environment(settings, target)
     result = migrate_database(
-        pe.project_config, pe.db_config, dry_run, message, revision
+        target.project_config, target.db_config, dry_run, message, revision
     )
-
     if result.success:
         success(result.message, dry_run)
     else:
@@ -143,9 +143,7 @@ def migrate(
 @app.command()
 def clone(
     ctx: typer.Context,
-    source: Annotated[
-        str, typer.Argument(help="Source database in format 'project.environment'")
-    ],
+    src: TargetType,
     target: TargetType,
     dry_run: Annotated[
         bool,
@@ -153,13 +151,8 @@ def clone(
     ] = False,
 ):
     """Clone database from source to target (same database type only)."""
-    settings: Settings = ctx.obj["settings"]
-
-    src_pe = validate_project_environment(settings, source)
-    tgt_pe = validate_project_environment(settings, target)
-    validate_matching_db_types(src_pe.db_config, tgt_pe.db_config)
-
-    result = clone_database(src_pe.db_config, tgt_pe.db_config, dry_run)
+    validate_matching_db_types(src.db_config, target.db_config)
+    result = clone_database(src.db_config, target.db_config, dry_run)
 
     if result.success:
         success(result.message)
@@ -184,11 +177,8 @@ def revision(
     ] = True,
 ):
     """Create a new migration revision."""
-    settings: Settings = ctx.obj["settings"]
-
-    p_env = validate_project_environment(settings, target)
     result = create_revision(
-        p_env.project_config, p_env.db_config, message, autogenerate
+        target.project_config, target.db_config, message, autogenerate
     )
 
     if result.success:

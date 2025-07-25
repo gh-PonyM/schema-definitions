@@ -1,9 +1,17 @@
 from pathlib import Path
+from typing import NamedTuple
 from urllib.parse import urlparse
 
+import click
 import typer
 from pydantic import PostgresDsn
-from schemi.settings import DatabaseConfig, SqliteConnection, PostgresConnection
+from schemi.settings import (
+    DatabaseConfig,
+    SqliteConnection,
+    PostgresConnection,
+    ProjectConfig,
+    Settings,
+)
 
 
 def parse_connection(value: str) -> "CliConnection":
@@ -48,3 +56,57 @@ class CliConnection:
     def __str__(self):
         t = self.value.type if self.value else "Emtpy"
         return f"DBConnection(type={t})"
+
+
+class ProjectEnvironment(NamedTuple):
+    """Parsed project.environment target."""
+
+    project_name: str
+    project_config: ProjectConfig
+    db_config: DatabaseConfig
+    environment_name: str | None = None
+
+
+def parse_project_string(settings: Settings, value: str) -> ProjectEnvironment:
+    """Validate and parse project.environment format."""
+    tokens = value.split(".")
+    if len(tokens) > 2:
+        raise typer.BadParameter(
+            "Target must be in format 'project.environment' or 'project' (for development)"
+        )
+    project_name, env_name = tokens if len(tokens) == 2 else (tokens[0], None)
+    if project_name not in settings.projects:
+        raise typer.BadParameter(
+            f"Project '{project_name}' not found in projects.",
+        )
+    if env_name:
+        if env_name not in settings.projects[project_name].db:
+            raise typer.BadParameter(
+                f"Project '{project_name}' has no environment named '{env_name}"
+            )
+    else:
+        if project_name not in settings.development.db:
+            raise typer.BadParameter(
+                f"Project '{project_name}' not found in development"
+            )
+
+    project_config = settings.projects[project_name]
+    db_config = (
+        project_config.db[env_name]
+        if env_name
+        else settings.development.db[project_name]
+    )
+    return ProjectEnvironment(
+        project_name=project_name,
+        environment_name=env_name,
+        project_config=project_config,
+        db_config=db_config,
+    )
+
+
+class ProjectEnvironParser(click.ParamType):
+    name = "ProjectEnvironment"
+
+    def convert(self, value, param, ctx):
+        settings: Settings = ctx.obj["settings"]
+        return parse_project_string(settings, value)
