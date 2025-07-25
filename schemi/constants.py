@@ -1,0 +1,3 @@
+PROG_NAME = "schemi"
+SETTINGS_PATH_ENV_VAR = "SCHEMI_SETTINGS_PATH"
+DEFAULT_SETTINGS_FN = "schemi_settings.yml"

@@ -84,3 +84,4 @@ migrations/versions/
 
 # Editors
 .idea/
+.aider*

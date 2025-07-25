@@ -4,16 +4,21 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
-import typer
+from pydantic import BaseModel, Field, field_validator, PrivateAttr
+from urllib.parse import quote_plus
 
-DEFAULT_SETTINGS_FN = "settings.yaml"
+from schemi.constants import DEFAULT_SETTINGS_FN
 
 
 class SqliteConnection(BaseModel):
     """SQLite database connection configuration."""
 
     db_path: Path
+
+    @property
+    def get_dsn(self) -> str:
+        """Get SQLAlchemy DSN for SQLite connection."""
+        return f"sqlite:///{self.db_path}"
 
 
 class PostgresConnection(BaseModel):
@@ -25,21 +30,31 @@ class PostgresConnection(BaseModel):
     database: str = "postgres"
     password: str = "postgres"
 
+    @property
+    def get_dsn(self) -> str:
+        """Get SQLAlchemy DSN for PostgreSQL connection."""
+        # URL encode the password to handle special characters
+        encoded_password = quote_plus(self.password)
+        return f"postgresql://{self.username}:{encoded_password}@{self.host}:{self.port}/{self.database}"
+
+    @field_validator("database")
+    @classmethod
+    def validate_db_name(cls, v: str) -> str:
+        if " " in v:
+            raise ValueError("Database name cannot contain spaces")
+        return v
+
+
 
 class DatabaseConfig(BaseModel):
     """Database configuration for a specific environment."""
 
     type: Literal["sqlite", "postgres"]
-    db_name: str = Field(..., description="Database name (no spaces allowed)")
     connection: SqliteConnection | PostgresConnection
 
-    @field_validator("db_name")
-    @classmethod
-    def validate_db_name(cls, v: str) -> str:
-        """Validate that db_name contains no spaces."""
-        if " " in v:
-            raise ValueError("Database name cannot contain spaces")
-        return v
+    @property
+    def db_name(self):
+        return getattr(self.connection, "database", self.connection.db_path)
 
 
 class ProjectConfig(BaseModel):
@@ -55,38 +70,26 @@ class DevelopmentConfig(BaseModel):
     db: dict[str, str | DatabaseConfig] = Field(default_factory=dict)
 
 
+def default_settings_path() -> Path:
+    return Path(".") / DEFAULT_SETTINGS_FN
+
+
+
 class Settings(BaseModel):
     """Main settings configuration."""
 
     development: DevelopmentConfig | None = None
     projects: dict[str, ProjectConfig] = Field(default_factory=dict)
 
-    _settings_path: Path | None = None
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self._settings_path = self._get_settings_path()
-
-    @staticmethod
-    def _get_settings_path() -> Path:
-        """Get the settings file path from environment or default location."""
-        import os
-        env_path = os.getenv("SCHEMI_SETTINGS_PATH")
-        if env_path:
-            return Path(env_path)
-
-        config_dir = Path(typer.get_app_dir("schemi"))
-        config_dir.mkdir(parents=True, exist_ok=True)
-        return config_dir / DEFAULT_SETTINGS_FN
+    _settings_path: Path | None = PrivateAttr(default_factory=default_settings_path)
 
     @classmethod
-    def load(cls, settings_path: Path | None = None) -> "Settings":
+    def from_file(cls, settings_path: Path) -> "Settings":
         """Load settings from file."""
-        settings_path = settings_path or cls._get_settings_path()
-
         if not settings_path.exists():
             # Create default settings file
             settings = cls()
+            settings._settings_path = settings_path
             settings.save()
             return settings
 

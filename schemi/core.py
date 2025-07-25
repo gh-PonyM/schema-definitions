@@ -1,11 +1,13 @@
-"""Core business logic for schemi operations."""
-
+import contextlib
+import tempfile
 from pathlib import Path
 from typing import NamedTuple
 import importlib
 import inspect
 from functools import lru_cache
 import shutil
+
+from .constants import PROG_NAME
 from .settings import DatabaseConfig, ProjectConfig, Settings
 
 
@@ -45,7 +47,7 @@ def module_path_root(module: str):
     assert module is not None
     return Path(inspect.getfile(module)).parents[0]
 
-templates_path = module_path_root("schemi") / "templates"
+templates_path = module_path_root(PROG_NAME) / "templates"
 
 def init_project(settings: Settings, project_name: str, force: bool = False, output_dir: Path | None = None) -> InitResult:
     """Initialize migration folder for a project, creating project config if needed."""
@@ -134,6 +136,41 @@ def clone_database(
     )
 
 
+@contextlib.contextmanager
+def create_temp_dir():
+    temp_dir = Path(tempfile.mkdtemp())
+    yield temp_dir
+    shutil.rmtree(temp_dir)
+
+
+def create_alembic_temp_files(tmp: Path, models_path: Path, versions_dir: Path) -> None:
+    # Create temporary alembic.ini file
+    alembic_ini_content = (templates_path / "alembic.ini").read_text()
+    # Create temporary env.py file
+    env_py_content = (templates_path / "env.py").read_text()
+    env_py_content = env_py_content.format(
+      models_path=models_path,
+      models_import_path=models_path.stem,
+    )
+    # Create temporary files
+
+    alembic_ini_path = tmp / "alembic.ini"
+    alembic_script_dir = tmp
+    alembic_ini_content = alembic_ini_content.format(
+    script_dir=str(alembic_script_dir),
+    versions_dir=str(versions_dir)
+    )
+    alembic_ini_path.write_text(alembic_ini_content)
+
+    # Write env.py to script_location directory
+    env_py_path = alembic_script_dir / "env.py"
+    env_py_path.write_text(env_py_content)
+
+    script_template = templates_path / "script.py.mako"
+    script_template_path = alembic_script_dir / script_template.name
+    shutil.copy2(script_template, script_template_path)
+
+
 def create_revision(
     project_config: ProjectConfig,
     message: str,
@@ -141,7 +178,6 @@ def create_revision(
 ) -> RevisionResult:
     """Create a new migration revision using alembic."""
     import subprocess
-    import tempfile
     import os
 
     models_path = project_config.module.absolute()
@@ -152,61 +188,32 @@ def create_revision(
     if not migrations_dir.exists():
         return RevisionResult(
             success=False,
-            message=f"Migrations directory not found at {migrations_dir}. Run 'schemi init' first."
+            message=f"Migrations directory not found at {migrations_dir}. Run '{PROG_NAME} init' first."
         )
-
-    # Create temporary alembic.ini file
-    alembic_ini_content = (templates_path / "alembic.ini").read_text()
-    
-    # Create temporary env.py file
-    env_py_content = (templates_path / "env.py").read_text()
-    env_py_content = env_py_content.format(
-      models_path=models_path,
-      models_import_path=models_path.stem,
-    )
-    # Create temporary files
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.ini', delete=False) as f:
-        alembic_ini_path = f.name
-        alembic_script_dir = Path(f.name).parent
-        alembic_ini_content = alembic_ini_content.format(
-        script_dir=str(alembic_script_dir),
-        versions_dir=str(versions_dir)
+    with create_temp_dir() as tmp:
+        create_alembic_temp_files(tmp, models_path, versions_dir)
+        # Run alembic revision command
+        cmd = ['alembic', '-c', str(tmp / "alembic.ini"), 'revision']
+        if autogenerate:
+            cmd.append('--autogenerate')
+        cmd.extend(['-m', message])
+        os.environ["SCHEMI_CURRENT_DSN"] = ""
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(migrations_dir.parent),
         )
-        f.write(alembic_ini_content)
-
-    # Write env.py to script_location directory
-    env_py_path = alembic_script_dir / "env.py"
-    env_py_path.write_text(env_py_content)
-
-    script_template = templates_path / "script.py.mako"
-    script_template_path = alembic_script_dir / script_template.name
-    shutil.copy2(script_template, script_template_path)
-
-    # Run alembic revision command
-    cmd = ['alembic', '-c', alembic_ini_path, 'revision']
-    if autogenerate:
-        cmd.append('--autogenerate')
-    cmd.extend(['-m', message])
-
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        cwd=str(migrations_dir.parent)
-    )
     if result.returncode != 0:
         return RevisionResult(
             success=False,
             message=f"Alembic revision failed: {result.stderr}"
         )
-
     # Find the created revision file
     revision_files = list(versions_dir.glob("*.py"))
     latest_revision = max(revision_files, key=lambda p: p.stat().st_mtime, default=None)
-
     return RevisionResult(
         success=True,
         message=f"Created revision: {message}",
         revision_file=str(latest_revision) if latest_revision else None
     )
-    os.unlink(alembic_ini_path)

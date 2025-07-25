@@ -7,6 +7,7 @@ import pytest
 import yaml
 from typer.testing import CliRunner as BaseCliRunner
 
+from schemi.constants import SETTINGS_PATH_ENV_VAR
 from schemi.settings import Settings
 
 
@@ -34,7 +35,7 @@ def temp_settings_dir():
 def cli_settings_path(temp_settings_dir, monkeypatch, sample_settings_data):
     """Create settings for CLI testing with environment variable set."""
     settings_path = temp_settings_dir / "test_settings.yaml"
-    monkeypatch.setenv("SCHEMI_SETTINGS_PATH", str(settings_path))
+    monkeypatch.setenv(SETTINGS_PATH_ENV_VAR, str(settings_path))
     return settings_path
 
 
@@ -47,7 +48,7 @@ def cli_settings(cli_settings_path, monkeypatch, sample_settings_data):
         yaml.dump(sample_settings_data, f)
 
     # Return loaded settings instance
-    return Settings.load()
+    return Settings.from_file()
 
 
 @pytest.fixture
@@ -59,7 +60,6 @@ def sample_settings_data():
                 "sqlite": "schemi-dev.sqlite",
                 "pglocal": {
                     "type": "postgres",
-                    "db_name": "dev_db",
                     "connection": {
                         "host": "localhost",
                         "port": 5432,
@@ -76,14 +76,12 @@ def sample_settings_data():
                 "db": {
                     "staging": {
                         "type": "sqlite",
-                        "db_name": "staging_db",
                         "connection": {
                             "db_path": "/path/to/staging.db"
                         }
                     },
                     "prod": {
                         "type": "postgres",
-                        "db_name": "prod_db",
                         "connection": {
                             "host": "prod.example.com",
                             "port": 5432,

@@ -19,7 +19,7 @@ def test_init_command_success(runner, cli_settings_path, temp_settings_dir):
 
     # Verify the config was written correctly by reading it back
     from schemi.settings import Settings
-    loaded_settings = Settings.load()
+    loaded_settings = Settings.from_file(cli_settings_path)
 
     # Check that projectA was added to the configuration
     assert "projectA" in loaded_settings.projects
@@ -207,7 +207,7 @@ def test_revision_command_success(runner, cli_settings_path, temp_settings_dir):
 
     # Verify the project config points to the correct models file
     from schemi.settings import Settings
-    settings = Settings.load()
+    settings = Settings.from_file(cli_settings_path)
     assert settings.projects[project_name].module == target_models_path.absolute()
 
     # Create a revision
