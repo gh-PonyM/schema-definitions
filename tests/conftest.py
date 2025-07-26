@@ -18,6 +18,7 @@ class CliRunner(BaseCliRunner):
         if not result.exit_code == 0 and self.with_traceback:
             print_tb(result.exc_info[2])
             print(result.exception)
+            print(result.stderr)
         return result
 
 

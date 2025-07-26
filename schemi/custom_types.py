@@ -82,7 +82,7 @@ def parse_project_string(settings: Settings, value: str) -> ProjectEnvironment:
     if env_name:
         if env_name not in settings.projects[project_name].db:
             raise typer.BadParameter(
-                f"Project '{project_name}' has no environment named '{env_name}"
+                f"Project '{project_name}' has no environment named '{env_name}'"
             )
     else:
         if project_name not in settings.development.db:

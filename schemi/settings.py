@@ -72,7 +72,7 @@ class ProjectConfig(BaseModel):
 
     @property
     def migrations_dir(self):
-        return self.module / "migrations"
+        return self.module.parent / "migrations"
 
 
 class DevelopmentConfig(BaseModel):

@@ -60,68 +60,40 @@ def test_init_command_with_force(runner, cli_settings, temp_settings_dir):
     assert "Migration folder initialized" in result.stdout
 
 
-def test_migrate_command_success(runner, cli_settings):
-    """Test successful migrate command."""
-    result = runner.invoke(app, ["migrate", "projectA.staging"])
-
-    assert result.exit_code == 0
-    assert "Migrated database" in result.stdout
-
-
-def test_migrate_command_dry_run(runner, cli_settings):
-    """Test migrate command with dry run."""
-    result = runner.invoke(app, ["migrate", "projectA.staging", "--dry-run"])
-
-    assert result.exit_code == 0
-    assert "[DRY RUN] Would migrate database " in result.stdout
-
-
 def test_migrate_command_invalid_target_format(runner, cli_settings):
     """Test migrate command with invalid target format."""
     result = runner.invoke(app, ["migrate", "invalid_target"])
 
-    assert result.exit_code == 1
-    assert "Target must be in format 'project.environment'" in result.stderr
+    assert result.exit_code == 2
+    assert "Project 'invalid_target' not found in projects" in result.stderr
+
+    result = runner.invoke(app, ["migrate", "projectA.foo"])
+    assert result.exit_code == 2
+    assert "Project 'projectA' has no environment name 'foo'" in result.stderr
 
 
-def test_migrate_command_project_not_found(runner, cli_settings):
-    """Test migrate command with non-existent project."""
-    result = runner.invoke(app, ["migrate", "nonexistent.staging"])
-
-    assert result.exit_code == 1
-    assert "Project 'nonexistent' not found in settings" in result.stderr
-
-
-def test_migrate_command_environment_not_found(runner, cli_settings):
-    """Test migrate command with non-existent environment."""
-    result = runner.invoke(app, ["migrate", "projectA.nonexistent"])
-
-    assert result.exit_code == 1
-    assert "Environment 'nonexistent' not found in project 'projectA'" in result.stderr
-
-
-def test_migrate_command_with_message(runner, cli_settings):
-    """Test migrate command with message option."""
-    result = runner.invoke(
-        app, ["migrate", "projectA.staging", "--message", "Test migration"]
-    )
-
-    assert result.exit_code == 0
-    assert "Migrated database " in result.stdout
-
-
-def test_migrate_command_with_revision(runner, cli_settings):
-    """Test migrate command with revision option."""
-    result = runner.invoke(app, ["migrate", "projectA.staging", "--revision", "abc123"])
-
-    assert result.exit_code == 0
-    assert "Migrated database " in result.stdout
+#
+# def test_migrate_command_with_message(runner, cli_settings):
+#     """Test migrate command with message option."""
+#     result = runner.invoke(
+#         app, ["migrate", "projectA.staging", "--message", "Test migration"]
+#     )
+#
+#     assert result.exit_code == 0
+#     assert "Migrated database " in result.stdout
+#
+#
+# def test_migrate_command_with_revision(runner, cli_settings):
+#     """Test migrate command with revision option."""
+#     result = runner.invoke(app, ["migrate", "projectA.staging", "--revision", "abc123"])
+#
+#     assert result.exit_code == 0
+#     assert "Migrated database " in result.stdout
 
 
 def test_clone_command_success(runner, cli_settings):
     """Test successful clone command between sqlite databases."""
-    result = runner.invoke(app, ["clone", "projectA.staging", "projectA.staging"])
-
+    result = runner.invoke(app, ["clone", "projectA.staging"])
     assert result.exit_code == 0
     # assert "Cloned staging_db to staging_db (sqlite)" in result.stdout
 

@@ -109,7 +109,7 @@ def init(
         raise typer.Exit(1)
 
 
-TargetType = Annotated[
+ProjectEnv = Annotated[
     ProjectEnvironment,
     typer.Argument(help="project or project.env", click_type=ProjectEnvironParser()),
 ]
@@ -117,40 +117,50 @@ TargetType = Annotated[
 
 @app.command()
 def migrate(
-    target: TargetType,
+    target: ProjectEnv,
     dry_run: Annotated[
         bool,
         typer.Option("--dry-run", help="Show what would be done without executing"),
     ] = False,
-    message: Annotated[
-        str | None, typer.Option("--message", "-m", help="Migration message")
-    ] = None,
     revision: Annotated[
-        str | None, typer.Option("--revision", help="Target revision")
-    ] = None,
+        str, typer.Option("--revision", help="Target revision")
+    ] = "HEAD",
 ):
     """Run database migrations."""
     result = migrate_database(
-        target.project_config, target.db_config, dry_run, message, revision
+        target.project_config, target.db_config, dry_run, revision
     )
     if result.success:
         success(result.message, dry_run)
     else:
-        typer.secho(f"Error: {result.message}", err=True, fg=typer.colors.RED)
+        error(result.message)
         raise typer.Exit(1)
 
 
 @app.command()
 def clone(
     ctx: typer.Context,
-    src: TargetType,
-    target: TargetType,
+    src: ProjectEnv,
+    target: Annotated[
+        ProjectEnvironment | None,
+        typer.Argument(
+            help="project or project.env", click_type=ProjectEnvironParser()
+        ),
+    ] = None,
     dry_run: Annotated[
         bool,
         typer.Option("--dry-run", help="Show what would be done without executing"),
     ] = False,
 ):
     """Clone database from source to target (same database type only)."""
+    settings = ctx.obj["settings"]
+    if not target:
+        # use dev db
+        target = settings.development.db.get(target.project_name)
+    if not target:
+        error(f"No database found for project {target.project_name}")
+        raise typer.Exit(1)
+
     validate_matching_db_types(src.db_config, target.db_config)
     result = clone_database(src.db_config, target.db_config, dry_run)
 
@@ -164,7 +174,7 @@ def clone(
 @app.command()
 def revision(
     ctx: typer.Context,
-    target: TargetType,
+    target: ProjectEnv,
     message: Annotated[
         str, typer.Option("--message", "-m", help="Revision message")
     ] = "Auto-generated revision",

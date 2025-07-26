@@ -172,12 +172,13 @@ def run_alembic(cmd: list[str], project_cfg: ProjectConfig, db_config: DatabaseC
         # Run alembic revision command
         cmd = ["alembic", "-c", str(tmp / "alembic.ini"), *cmd]
         os.environ["SCHEMI_CURRENT_DSN"] = db_config.connection.get_dsn
-        return subprocess.run(
+        result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             cwd=str(project_cfg.migrations_dir.parent),
         )
+    return result
 
 
 def create_revision(
@@ -229,7 +230,7 @@ def migrate_database(
     if result.returncode != 0:
         return MigrateResult(
             success=False,
-            message=f"Failed to run alembic migrations ‘{db_config.db_name}’ ({db_config.type})",
+            message=f"Failed to run alembic migrations ‘{db_config.db_name}’ ({db_config.type}): {result.stderr}",
             sql=result.stdout.strip() if dry_run else None,
         )
     action = "[DRY RUN] Would migrate" if dry_run else "Migrated"
