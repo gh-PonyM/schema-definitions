@@ -1,15 +1,21 @@
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Optional
 from pathlib import Path
 import typer
 
 from schemi.custom_types import (
-    CliConnection,
+    DBConnection,
     parse_connection,
     ProjectEnvironment,
     ProjectEnvironParser,
 )
-from .core import clone_database, create_revision, init_project, migrate_database
+from .core import (
+    clone_database,
+    create_revision,
+    init_project,
+    migrate_database,
+    run_alembic,
+)
 from .settings import Settings, default_settings_path
 from .validation import (
     validate_matching_db_types,
@@ -53,8 +59,8 @@ def main(
     ctx.obj["settings"] = settings
 
 
-ConnectionCliType = Annotated[
-    CliConnection,
+OptionalDBConnection = Annotated[
+    DBConnection | None,
     typer.Option(
         "--connection",
         "-c",
@@ -78,7 +84,7 @@ def init(
     env: Annotated[
         str, typer.Option("--env", "-e", help="Environment for connection")
     ] = "prod",
-    connection: ConnectionCliType = None,
+    connection: OptionalDBConnection = None,
     force: Annotated[
         bool, typer.Option("--force", "-f", help="Overwrite existing migration files")
     ] = False,
@@ -156,9 +162,9 @@ def clone(
     settings = ctx.obj["settings"]
     if not target:
         # use dev db
-        target = settings.development.db.get(target.project_name)
+        target = settings.development.db.get(src.project_name)
     if not target:
-        error(f"No database found for project {target.project_name}")
+        error(f"No database found for project {src.project_name}")
         raise typer.Exit(1)
 
     validate_matching_db_types(src.db_config, target.db_config)
@@ -173,7 +179,6 @@ def clone(
 
 @app.command()
 def revision(
-    ctx: typer.Context,
     target: ProjectEnv,
     message: Annotated[
         str, typer.Option("--message", "-m", help="Revision message")
@@ -198,6 +203,23 @@ def revision(
     else:
         error(result.message)
         raise typer.Exit(1)
+
+
+@app.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
+)
+def alembic(
+    ctx: typer.Context,
+    target: ProjectEnv,
+):
+    """
+    Run raw alembic commands for a given project environment.
+    Usage: schemi alembic project.env -h
+    """
+    project_config = target.project_config
+    db_config = target.db_config
+    result = run_alembic(ctx.args, project_config, db_config)
+    typer.secho(result.stdout)
 
 
 if __name__ == "__main__":

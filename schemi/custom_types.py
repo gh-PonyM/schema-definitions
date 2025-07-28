@@ -14,7 +14,7 @@ from schemi.settings import (
 )
 
 
-def parse_connection(value: str) -> "CliConnection":
+def parse_connection(value: str) -> "DBConnection":
     parsed = urlparse(value)
     if parsed.scheme == "sqlite":
         if not parsed.path:
@@ -43,10 +43,10 @@ def parse_connection(value: str) -> "CliConnection":
         raise typer.BadParameter(
             f"Unsupported scheme '{parsed.scheme}'. Only sqlite and postgresql/postgres are supported."
         )
-    return CliConnection(cfg)
+    return DBConnection(cfg)
 
 
-class CliConnection:
+class DBConnection:
     def __init__(self, value):
         self.value: DatabaseConfig | None = value
 
