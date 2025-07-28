@@ -47,6 +47,7 @@ Then just define your `SQLModel` files as in [models.py](projects/news_agg/model
 - Clone databases from prod to dev
 - Running short-commands for alembic like `revision` or `migrate`
 - Alembic command wrapper that takes your project and passes the db information to alembic
+- Exporting jsonschemas for your models (see [schemas](schemas/news_agg.ScrapeResult.json))
 
 ## How it works under the hood
 

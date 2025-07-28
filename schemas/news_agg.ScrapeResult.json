@@ -1,0 +1,29 @@
+{
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "integer"
+    },
+    "created": {
+      "format": "date-time",
+      "title": "Created",
+      "type": "string"
+    },
+    "html": {
+      "title": "Html",
+      "type": "string"
+    },
+    "url": {
+      "title": "Url",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "created",
+    "html",
+    "url"
+  ],
+  "title": "ScrapeResult",
+  "type": "object"
+}
