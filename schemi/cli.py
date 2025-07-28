@@ -1,5 +1,6 @@
+import json
 from enum import Enum
-from typing import Annotated, Optional
+from typing import Annotated
 from pathlib import Path
 import typer
 
@@ -15,6 +16,7 @@ from .core import (
     init_project,
     migrate_database,
     run_alembic,
+    yield_models_by_file,
 )
 from .settings import Settings, default_settings_path
 from .validation import (
@@ -220,6 +222,28 @@ def alembic(
     db_config = target.db_config
     result = run_alembic(ctx.args, project_config, db_config)
     typer.secho(result.stdout)
+
+
+@app.command()
+def export_json_schemas(
+    ctx: typer.Context,
+    output_dir: Annotated[
+        Path, typer.Option("--output-dir", "-o", default_factory=Path)
+    ],
+    by_alias: bool = True,
+    indent: int = 2,
+):
+    """Exports jsonschemas using <project_name>.<class_name>.json naming pattern"""
+    settings: Settings = ctx.obj["settings"]
+    for project_name, file in settings.all_code_files():
+        if not file.exists():
+            error(f"No such file: {file}")
+            continue
+        for cls in yield_models_by_file(file):
+            fn = f"{project_name}.{cls.__name__}.json"
+            schema = cls.model_json_schema(by_alias=by_alias, mode="serialization")
+            schema_str = json.dumps(schema, indent=indent)
+            (output_dir / fn).write_text(schema_str)
 
 
 if __name__ == "__main__":

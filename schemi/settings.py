@@ -139,6 +139,10 @@ class Settings(BaseModel):
         settings._settings_path = settings_path
         return settings
 
+    def all_code_files(self):
+        for name, project in self.projects.items():
+            yield name, project.module
+
     def save(self) -> None:
         """Save settings to file."""
         if not self._settings_path:

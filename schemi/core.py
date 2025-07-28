@@ -1,11 +1,14 @@
 import contextlib
 import tempfile
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Any, Callable, Generator
 import importlib
 import inspect
 from functools import lru_cache
 import shutil
+
+from pydantic import BaseModel
+from sqlmodel import SQLModel
 
 from .constants import PROG_NAME
 from .settings import DatabaseConfig, ProjectConfig, Settings, DBType
@@ -238,3 +241,26 @@ def migrate_database(
         success=True,
         message=f"{action} database ‘{db_config.db_name}’ ({db_config.type})",
     )
+
+
+def exportable_model(m: Any):
+    return (
+        inspect.isclass(m)
+        and issubclass(m, BaseModel)
+        and not m == BaseModel
+        and not m == SQLModel
+    )
+
+
+def yield_models_by_file(
+    file: Path,
+    predicate: Callable[[Any], bool] = exportable_model,
+) -> Generator[BaseModel, None, None]:
+    module_name = file.stem + "_dynamic"
+    spec = importlib.util.spec_from_file_location(module_name, file)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load module from {file}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    for _, obj in inspect.getmembers(module, predicate=predicate):
+        yield obj
